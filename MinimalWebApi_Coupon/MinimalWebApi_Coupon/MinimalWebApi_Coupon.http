@@ -1,0 +1,6 @@
+@MinimalWebApi_Coupon_HostAddress = http://localhost:5133
+
+GET {{MinimalWebApi_Coupon_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
