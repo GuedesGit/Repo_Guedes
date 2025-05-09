@@ -14,10 +14,12 @@ namespace OrderInserter
         //const string connectionString = "Server=MASTERGUEDESPC;Database=DummyDB;Trusted_Connection=True;Encrypt=False;";
 
         const string connectionString = "Server=MASTERGUEDESPC;Database=DummyDB;Trusted_Connection=True;Encrypt=True;TrustServerCertificate=True;";
-
+        record BenchmarkResult(string Label, long Milliseconds);
 
         static void Main(string[] args)
         {
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+
             const int count = 10000; // Or however many you want
             var orders = GenerateOrders(count);
 
@@ -25,11 +27,29 @@ namespace OrderInserter
 
             Console.WriteLine($"Inserting {count} orders...\n");
 
-            Measure("Simple Insert (One by One)", () => InsertSimple(orders));
-            Measure("Dapper Batch Insert", () => InsertDapperBatch(orders));
-            Measure("SqlBulkCopy", () => InsertWithBulkCopy(orders));
+            var results = new List<BenchmarkResult>();
+
+            results.Add(Measure("Simple Insert (One by One)", () => InsertSimple(orders)));
+            results.Add(Measure("Dapper Batch Insert", () => InsertDapperBatch(orders)));
+            results.Add(Measure("SqlBulkCopy", () => InsertWithBulkCopy(orders)));
+
+            Console.WriteLine("\n📊 Benchmark Results:\n");
+
+            PrintBenchmarkResults(results);
 
             Console.WriteLine("\nAll done! 🎉");
+        }
+
+        static void PrintBenchmarkResults(List<BenchmarkResult> results)
+        {
+            long max = results.Max(r => r.Milliseconds);
+
+            foreach (var result in results)
+            {
+                int barLength = (int)((result.Milliseconds / (double)max) * 40);
+                string bar = new string('█', barLength);
+                Console.WriteLine($"{result.Label,-25}: {bar,-40} {result.Milliseconds} ms");
+            }
         }
 
         static void ClearOrdersTable()
@@ -40,12 +60,12 @@ namespace OrderInserter
             Console.WriteLine("🧹 Orders table cleared.\n");
         }
 
-        static void Measure(string label, Action action)
+        static BenchmarkResult Measure(string label, Action action)
         {
             var stopwatch = Stopwatch.StartNew();
             action();
             stopwatch.Stop();
-            Console.WriteLine($"{label,-25}: {stopwatch.ElapsedMilliseconds} ms");
+            return new BenchmarkResult(label, stopwatch.ElapsedMilliseconds);
         }
 
         static List<Order> GenerateOrders(int count)
