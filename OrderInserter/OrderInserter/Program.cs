@@ -5,39 +5,50 @@ using System.Diagnostics;
 using System.Linq;
 using Microsoft.Data.SqlClient;
 using Dapper;
+using OrderInserter.Models;
 
 namespace OrderInserter
 {
-    class Program
+    // =========================
+    // Main Program
+    // =========================
+    static class Program
     {
-
-        //const string connectionString = "Server=MASTERGUEDESPC;Database=DummyDB;Trusted_Connection=True;Encrypt=False;";
-
         const string connectionString = "Server=MASTERGUEDESPC;Database=DummyDB;Trusted_Connection=True;Encrypt=True;TrustServerCertificate=True;";
-        record BenchmarkResult(string Label, long Milliseconds);
 
         static void Main(string[] args)
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-            const int count = 10000; // Or however many you want
+            const int count = 10000;
             var orders = GenerateOrders(count);
 
             ClearOrdersTable();
 
             Console.WriteLine($"Inserting {count} orders...\n");
 
-            var results = new List<BenchmarkResult>();
-
-            results.Add(Measure("Simple Insert (One by One)", () => InsertSimple(orders)));
-            results.Add(Measure("Dapper Batch Insert", () => InsertDapperBatch(orders)));
-            results.Add(Measure("SqlBulkCopy", () => InsertWithBulkCopy(orders)));
+            var results = new List<BenchmarkResult>
+            {
+                Measure("Simple Insert (One by One)", () => InsertSimple(orders)),
+                Measure("Dapper Batch Insert", () => InsertDapperBatch(orders)),
+                Measure("SqlBulkCopy", () => InsertWithBulkCopy(orders))
+            };
 
             Console.WriteLine("\n📊 Benchmark Results:\n");
-
             PrintBenchmarkResults(results);
 
             Console.WriteLine("\nAll done! 🎉");
+        }
+
+        // =========================
+        // Benchmark Utilities
+        // =========================
+        static BenchmarkResult Measure(string label, Action action)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            action();
+            stopwatch.Stop();
+            return new BenchmarkResult(label, stopwatch.ElapsedMilliseconds);
         }
 
         static void PrintBenchmarkResults(List<BenchmarkResult> results)
@@ -52,6 +63,20 @@ namespace OrderInserter
             }
         }
 
+        // =========================
+        // Data Generation & Cleanup
+        // =========================
+        static List<Order> GenerateOrders(int count)
+        {
+            var rnd = new Random();
+            return Enumerable.Range(1, count)
+                .Select(i => new Order
+                {
+                    Number = i,
+                    Price = Math.Round((decimal)(rnd.NextDouble() * 99 + 1), 2)
+                }).ToList();
+        }
+
         static void ClearOrdersTable()
         {
             using var connection = new SqlConnection(connectionString);
@@ -60,26 +85,9 @@ namespace OrderInserter
             Console.WriteLine("🧹 Orders table cleared.\n");
         }
 
-        static BenchmarkResult Measure(string label, Action action)
-        {
-            var stopwatch = Stopwatch.StartNew();
-            action();
-            stopwatch.Stop();
-            return new BenchmarkResult(label, stopwatch.ElapsedMilliseconds);
-        }
-
-        static List<Order> GenerateOrders(int count)
-        {
-            var rnd = new Random();
-            return Enumerable.Range(1, count)
-                .Select(i => new Order
-                {
-                    Number = i,
-                    Price = Math.Round((decimal)(rnd.NextDouble() * 99 + 1), 2) // Safe range: 1.00 to 100.00
-                }).ToList();
-        }
-
-
+        // =========================
+        // Insert Methods
+        // =========================
         static void InsertSimple(List<Order> orders)
         {
             using var connection = new SqlConnection(connectionString);
@@ -89,13 +97,11 @@ namespace OrderInserter
 
             foreach (var order in orders)
             {
-
                 if (order.Price <= 0)
                 {
                     Console.WriteLine($"⚠️ Order {order.Number} has invalid price: {order.Price}");
                     continue;
                 }
-
                 connection.Execute(sql, order);
             }
         }
@@ -112,24 +118,16 @@ namespace OrderInserter
         static void InsertWithBulkCopy(List<Order> orders)
         {
             var table = new DataTable();
-
-            // ✅ Define columns properly and disallow nulls
-            var numberColumn = new DataColumn("Number", typeof(int)) { AllowDBNull = false };
-            var priceColumn = new DataColumn("Price", typeof(decimal)) { AllowDBNull = false };
-
-            table.Columns.Add(numberColumn);
-            table.Columns.Add(priceColumn);
+            table.Columns.Add(new DataColumn("Number", typeof(int)) { AllowDBNull = false });
+            table.Columns.Add(new DataColumn("Price", typeof(decimal)) { AllowDBNull = false });
 
             foreach (var order in orders)
             {
-                
-                // ✅ Ensure price is valid (not zero or negative)
                 if (order.Price <= 0)
                 {
                     Console.WriteLine($"⚠️ Skipping order with invalid price: {order.Number} - {order.Price}");
                     continue;
                 }
-
                 table.Rows.Add(order.Number, order.Price);
             }
 
@@ -146,12 +144,5 @@ namespace OrderInserter
 
             bulkCopy.WriteToServer(table);
         }
-
-    }
-
-    class Order
-    {
-        public int Number { get; set; }
-        public decimal Price { get; set; }
     }
 }
