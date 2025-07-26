@@ -1,0 +1,29 @@
+@page "/movies/{id:int}"
+@inject NetflixStyleAppBlazor.Data.AppDbContext Db
+@using NetflixStyleAppBlazor.Models
+
+<PageTitle>Detalhes do Filme</PageTitle>
+
+@if (movie == null)
+{
+    <p><em>Filme não encontrado.</em></p>
+}
+else
+{
+    <h1>@movie.Title</h1>
+    <img src="@movie.ImageUrl" alt="@movie.Title" style="max-width:200px;" />
+    <p><strong>Categoria:</strong> @movie.Category</p>
+    <p><strong>Ano:</strong> @movie.Year</p>
+    <p><strong>Descrição:</strong> @movie.Description</p>
+}
+
+@code {
+    [Parameter]
+    public int id { get; set; }
+    private Movie? movie;
+
+    protected override void OnInitialized()
+    {
+        movie = Db.Movies.FirstOrDefault(m => m.Id == id && !m.IsSeries);
+    }
+}

@@ -1,0 +1,42 @@
+@page "/series"
+@inject NetflixStyleAppBlazor.Data.AppDbContext Db
+@using NetflixStyleAppBlazor.Models
+@using Microsoft.AspNetCore.Components.Web
+
+<PageTitle>Séries</PageTitle>
+
+<h1>Séries</h1>
+
+@if (series == null)
+{
+    <p><em>A carregar...</em></p>
+}
+else if (!series.Any())
+{
+    <p><em>Não existem séries na base de dados.</em></p>
+}
+else
+{
+   <div class="movie-grid">
+        @foreach (var serie in series)
+        {
+            <NavLink class="movie-card" href="@($"/series/{serie.Id}")">
+                <img src="@serie.ImageUrl" alt="@serie.Title" />
+                <div class="movie-title">@serie.Title</div>
+                <div class="movie-meta">
+                    <span>@serie.Category</span> • <span>@serie.Year</span>
+                </div>
+                <div class="movie-desc">@serie.Description</div>
+            </NavLink>
+        }
+    </div>
+}
+
+@code {
+    private List<Movie>? series;
+
+    protected override void OnInitialized()
+    {
+        series = Db.Movies.Where(m => m.IsSeries).ToList();
+    }
+}

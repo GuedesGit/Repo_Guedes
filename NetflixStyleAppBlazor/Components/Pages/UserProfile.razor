@@ -1,0 +1,33 @@
+@page "/user/{id:int}"
+@inject NetflixStyleAppBlazor.Data.AppDbContext Db
+@using NetflixStyleAppBlazor.Models
+
+<PageTitle>Perfil do Utilizador</PageTitle>
+
+@if (user == null)
+{
+    <p><em>Utilizador não encontrado.</em></p>
+}
+else
+{
+    <h1>@user.Name</h1>
+    <p><strong>Email:</strong> @user.Email</p>
+    <h2>Filmes Favoritos</h2>
+    <ul>
+        @foreach (var fav in user.Favorites)
+        {
+            <li>@fav.Movie?.Title</li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter]
+    public int id { get; set; }
+    private User? user;
+
+    protected override void OnInitialized()
+    {
+        user = Db.Users.FirstOrDefault(u => u.Id == id);
+    }
+}

@@ -1,0 +1,38 @@
+@page "/series/{id:int}"
+@inject NetflixStyleAppBlazor.Data.AppDbContext Db
+@using NetflixStyleAppBlazor.Models
+
+<PageTitle>Detalhes da Série</PageTitle>
+
+@if (serie == null)
+{
+    <p><em>Série não encontrada.</em></p>
+}
+else
+{
+    <h1>@serie.Title</h1>
+    <img src="@serie.ImageUrl" alt="@serie.Title" style="max-width:200px;" />
+    <p><strong>Categoria:</strong> @serie.Category</p>
+    <p><strong>Ano:</strong> @serie.Year</p>
+    <p><strong>Descrição:</strong> @serie.Description</p>
+    <h2>Episódios</h2>
+    <ul>
+        @foreach (var ep in episodes ?? new List<Episode>())
+        {
+            <li><strong>@ep.Number:</strong> @ep.Title - @ep.Description</li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter]
+    public int id { get; set; }
+    private Movie? serie;
+    private List<Episode>? episodes;
+
+    protected override void OnInitialized()
+    {
+        serie = Db.Movies.FirstOrDefault(m => m.Id == id && m.IsSeries);
+        episodes = Db.Episodes.Where(e => e.SeriesId == id).ToList();
+    }
+}
