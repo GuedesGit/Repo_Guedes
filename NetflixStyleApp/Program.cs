@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.EntityFrameworkCore;
+using NetflixStyleApp;
 using NetflixStyleApp.Data;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
